@@ -24,7 +24,7 @@ float vspeed = 0;      // feet per minute
 #define BACKGROUND_COLOR TFT_BLACK
 #define HORIZON_COLOR TFT_BLUE
 #define SKY_COLOR TFT_CYAN
-#define GROUND_COLOR TFT_DARKGREEN
+#define GROUND_COLOR TFT_BROWN
 #define WHITE_COLOR TFT_WHITE
 #define YELLOW_COLOR TFT_YELLOW
 #define RED_COLOR TFT_RED
@@ -45,23 +45,22 @@ void setup()
     printMemoryInfo();
     tft.init();
     tft.setRotation(1);
-    // tft.setSwapBytes(true);
-    tft.fillScreen(TFT_BLACK);
+
+    tft.fillScreen(BACKGROUND_COLOR);
 
     background.setColorDepth(8);
-    background.createSprite(320, 240);
+    if (background.createSprite(320, 240) == nullptr)
+        Serial.println("background Sprite not created :(");
 
     background.setPivot(160, 120);
-    // background.setRotation(1);
-    // background.setSwapBytes(true);
 
     horizonSky.setColorDepth(8);
-    horizonSky.createSprite(200, 200);
-    // horizonSky.setSwapBytes(true);
+    if (horizonSky.createSprite(200, 200) == nullptr)
+        Serial.println("horizon Sprite not created :(");
 
     horizon.setColorDepth(8);
-    horizon.createSprite(200, 200);
-    // horizon.setSwapBytes(true);
+    if (horizon.createSprite(200, 200) == nullptr)
+        Serial.println("horizon Sprite not created :(");
 
     printMemoryInfo();
 }
@@ -69,8 +68,8 @@ void setup()
 void loop()
 {
     // Simulate changing flight parameters
-    pitch = 50.0 * sin(millis() / 1000.0);
-    roll = 120.0 * sin(millis() / 1700.0);
+    pitch = 50.0 * sin(millis() / 3000.0);
+    roll = 120.0 * sin(millis() / 5000.0);
     airspeed = 120 + 20 * sin(millis() / 8000.0);
     altitude = 4500 + 500 * sin(millis() / 9000.0);
     heading = fmod(180 + 30 * sin(millis() / 6000.0), 360);
@@ -109,7 +108,7 @@ void printMemoryInfo()
 
 void drawPFD()
 {
-    background.fillSprite(TFT_BLACK);
+    background.fillSprite(BACKGROUND_COLOR);
     // Draw the artificial horizon
     drawArtificialHorizon(pitch, roll);
 
@@ -131,60 +130,19 @@ void drawPFD()
 void drawArtificialHorizon(float pitchDeg, float rollDeg)
 {
     int diffPitch = ((int)pitchDeg);
-    horizonSky.fillCircle(100, 100, 98, TFT_WHITE);
-    horizonSky.fillCircle(100, 100, 95, TFT_BLUE);
+    horizonSky.fillCircle(100, 100, 98, WHITE_COLOR);
+    horizonSky.fillCircle(100, 100, 95, SKY_COLOR);
 
-    horizon.fillSprite(TFT_BLACK);
-    horizon.fillCircle(100, 100, 95, TFT_BROWN);
-    // horizon.fillRect(0, 80 + diffPitch, 160, 0 - diffPitch, TFT_BLACK);
-    horizon.fillRect(0, 0, 200, 100 + diffPitch, TFT_BLACK);
+    horizon.fillSprite(BACKGROUND_COLOR);
+    horizon.fillCircle(100, 100, 95, GROUND_COLOR);
+    horizon.fillRect(0, 0, 200, 100 + diffPitch, BACKGROUND_COLOR);
 
     // int horizonSize = 40;
     int centerX = WIDTH / 2;
     int centerY = HEIGHT / 2;
-    // // Clear area (240x240 centered box)
-    // tft.fillRect(centerX - horizonSize / 2, centerY - horizonSize / 2, horizonSize, horizonSize, TFT_BLACK);
 
-    // // Convert to radians
-    // float pitchOffset = pitchDeg * 2; // scale: 2 pixels per degree
-    // float rollRad = rollDeg * DEG_TO_RAD;
-
-    // // Calculate rotated horizon line endpoints
-    // float lineLength = 20;
-    // float x1 = -lineLength;
-    // float x2 = lineLength;
-    // float y1 = pitchOffset;
-    // float y2 = pitchOffset;
-
-    // // Rotate points around (0,0)
-    // float cosA = cos(rollRad);
-    // float sinA = sin(rollRad);
-
-    // float rx1 = x1 * cosA - y1 * sinA;
-    // float ry1 = x1 * sinA + y1 * cosA;
-    // float rx2 = x2 * cosA - y2 * sinA;
-    // float ry2 = x2 * sinA + y2 * cosA;
-
-    // // Shift into center
-    // int sx1 = centerX + rx1;
-    // int sy1 = centerY + ry1;
-    // int sx2 = centerX + rx2;
-    // int sy2 = centerY + ry2;
-
-    // // Draw sky and ground halves
-    // // tft.fillTriangle(centerX, centerY, sx1, sy1, sx2, sy2, TFT_BLUE); // Sky
-    // // tft.fillTriangle(centerX, centerY, sx1, sy1, sx2, sy2, TFT_BLUE);
-    // // tft.fillTriangle(centerX, centerY + 40, sx1, sy1 + 40, sx2, sy2 + 40, TFT_BROWN); // Ground
-
-    // // Draw horizon line
-    // tft.drawLine(sx1, sy1, sx2, sy2, TFT_WHITE);
-
-    // // Draw center marker
-    // horizon.drawLine(centerX - 5, centerY, centerX + 5, centerY, TFT_YELLOW);
-    // horizon.drawLine(centerX, centerY - 5, centerX, centerY + 5, TFT_YELLOW);
-
-    horizon.pushToSprite(&horizonSky, 0, 0, TFT_BLACK);
-    horizonSky.pushRotated(&background, rollDeg, TFT_BLACK);
+    horizon.pushToSprite(&horizonSky, 0, 0, BACKGROUND_COLOR);
+    horizonSky.pushRotated(&background, rollDeg, BACKGROUND_COLOR);
 }
 
 void drawRollIndicator(float roll)
@@ -404,6 +362,6 @@ void drawCenterReticle()
     // background.fillTriangle(centerX - 10, centerY,
     //                         centerX, centerY + 10,
     //                         centerX + 10, centerY, YELLOW_COLOR);
-    background.drawWideLine(centerX - 20, centerY, centerX + 20, centerY, 3, TFT_WHITE, TFT_BLACK);
-    background.drawWideLine(centerX, centerY + 20, centerX, centerY - 20 , 3, TFT_WHITE, TFT_BLACK);
+    background.drawWideLine(centerX - 20, centerY, centerX + 20, centerY, 3, WHITE_COLOR, BACKGROUND_COLOR);
+    background.drawWideLine(centerX, centerY + 20, centerX, centerY - 20, 3, WHITE_COLOR, BACKGROUND_COLOR);
 }

@@ -9,7 +9,7 @@ TFT_eSprite horizonSky = TFT_eSprite(&tft);
 TFT_eSprite horizon = TFT_eSprite(&tft);
 
 // Display dimensions
-#define WIDTH 320
+#define WIDTH 240
 #define HEIGHT 240
 
 // PFD parameters
@@ -48,17 +48,14 @@ void setup()
 
     tft.fillScreen(BACKGROUND_COLOR);
 
-    background.setColorDepth(8);
-    if (background.createSprite(320, 240) == nullptr)
+    if (background.createSprite(240, 240) == nullptr)
         Serial.println("background Sprite not created :(");
 
-    background.setPivot(160, 120);
+    background.setPivot(120, 120);
 
-    horizonSky.setColorDepth(8);
     if (horizonSky.createSprite(200, 200) == nullptr)
         Serial.println("horizon Sprite not created :(");
 
-    horizon.setColorDepth(8);
     if (horizon.createSprite(200, 200) == nullptr)
         Serial.println("horizon Sprite not created :(");
 
@@ -113,13 +110,13 @@ void drawPFD()
     drawArtificialHorizon(pitch, roll);
 
     // Draw the airspeed indicator
-    drawAirspeedIndicator(airspeed);
+    // drawAirspeedIndicator(airspeed);
 
     // Draw the altitude indicator
-    drawAltitudeIndicator(altitude, vspeed);
+    // drawAltitudeIndicator(altitude, vspeed);
 
     // Draw the heading indicator
-    drawHeadingIndicator(heading);
+    // drawHeadingIndicator(heading);
 
     // Draw the center reticle
     drawCenterReticle();

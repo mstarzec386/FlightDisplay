@@ -3,14 +3,14 @@
 #include <SPI.h>
 #include <math.h>
 
+#include "User_setup.h"
+
 TFT_eSPI tft = TFT_eSPI();
 TFT_eSprite background = TFT_eSprite(&tft);
 TFT_eSprite horizonSky = TFT_eSprite(&tft);
 TFT_eSprite horizon = TFT_eSprite(&tft);
-
-// Display dimensions
-#define WIDTH 240
-#define HEIGHT 240
+int displayWidth = 0;
+int displayHeight = 0;
 
 // PFD parameters
 float pitch = 0;       // degrees
@@ -45,6 +45,9 @@ void setup()
     printMemoryInfo();
     tft.init();
     tft.setRotation(1);
+
+    displayHeight = tft.height();
+    displayWidth = tft.width();
 
     tft.fillScreen(BACKGROUND_COLOR);
 
@@ -134,50 +137,8 @@ void drawArtificialHorizon(float pitchDeg, float rollDeg)
     horizon.fillCircle(100, 100, 95, GROUND_COLOR);
     horizon.fillRect(0, 0, 200, 100 + diffPitch, BACKGROUND_COLOR);
 
-    // int horizonSize = 40;
-    int centerX = WIDTH / 2;
-    int centerY = HEIGHT / 2;
-
     horizon.pushToSprite(&horizonSky, 0, 0, BACKGROUND_COLOR);
     horizonSky.pushRotated(&background, rollDeg, BACKGROUND_COLOR);
-}
-
-void drawRollIndicator(float roll)
-{
-    int centerX = WIDTH / 2;
-    int centerY = HEIGHT / 2;
-    int radius = 60;
-
-    tft.drawCircle(centerX, centerY, radius, WHITE_COLOR);
-
-    for (int angle = -60; angle <= 60; angle += 10)
-    {
-        if (angle == 0)
-            continue;
-        float rad = radians(angle);
-        int x1 = centerX + radius * sin(rad);
-        int y1 = centerY - radius * cos(rad);
-
-        int markLength = (abs(angle) % 30 == 0) ? 12 : 6;
-        int x2 = centerX + (radius - markLength) * sin(rad);
-        int y2 = centerY - (radius - markLength) * cos(rad);
-
-        tft.drawLine(x1, y1, x2, y2, WHITE_COLOR);
-
-        if (abs(angle) % 30 == 0)
-        {
-            tft.setTextColor(WHITE_COLOR, BACKGROUND_COLOR);
-            tft.setTextSize(1);
-            x2 = centerX + (radius - 20) * sin(rad);
-            y2 = centerY - (radius - 20) * cos(rad);
-            tft.setCursor(x2 - 6, y2 - 4);
-            tft.print(abs(angle));
-        }
-    }
-
-    tft.fillTriangle(centerX - 5, centerY - radius - 10,
-                     centerX, centerY - radius,
-                     centerX + 5, centerY - radius - 10, RED_COLOR);
 }
 
 void drawAirspeedIndicator(float speed)
@@ -185,7 +146,7 @@ void drawAirspeedIndicator(float speed)
     int x = 0;
     int width = 40;
     int height = 140;
-    int centerY = HEIGHT / 2;
+    int centerY = displayHeight / 2;
 
     background.fillRect(x, centerY - height / 2, width, height, BACKGROUND_COLOR);
     background.drawRect(x, centerY - height / 2, width, height, WHITE_COLOR);
@@ -232,10 +193,10 @@ void drawAirspeedIndicator(float speed)
 
 void drawAltitudeIndicator(float altitude, float vspeed)
 {
-    int x = WIDTH - 40;
+    int x = displayWidth - 40;
     int width = 40;
     int height = 140;
-    int centerY = HEIGHT / 2;
+    int centerY = displayHeight / 2;
 
     background.fillRect(x, centerY - height / 2, width, height, BACKGROUND_COLOR);
     background.drawRect(x, centerY - height / 2, width, height, WHITE_COLOR);
@@ -311,7 +272,7 @@ void drawVerticalSpeedIndicator(float vspeed, int x, int centerY)
 
 void drawHeadingIndicator(float heading)
 {
-    int centerX = WIDTH / 2;
+    int centerX = displayWidth / 2;
     int topY = 0;
     int width = 180;
     int height = 20;
@@ -350,15 +311,9 @@ void drawHeadingIndicator(float heading)
 
 void drawCenterReticle()
 {
-    int centerX = WIDTH / 2;
-    int centerY = HEIGHT / 2;
+    int centerX = displayWidth / 2;
+    int centerY = displayHeight / 2;
 
-    // background.fillTriangle(centerX - 10, centerY,
-    //                         centerX, centerY - 10,
-    //                         centerX + 10, centerY, YELLOW_COLOR);
-    // background.fillTriangle(centerX - 10, centerY,
-    //                         centerX, centerY + 10,
-    //                         centerX + 10, centerY, YELLOW_COLOR);
     background.drawWideLine(centerX - 20, centerY, centerX + 20, centerY, 3, WHITE_COLOR, BACKGROUND_COLOR);
     background.drawWideLine(centerX, centerY + 20, centerX, centerY - 20, 3, WHITE_COLOR, BACKGROUND_COLOR);
 }

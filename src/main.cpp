@@ -11,6 +11,8 @@ TFT_eSprite horizonSky = TFT_eSprite(&tft);
 TFT_eSprite horizon = TFT_eSprite(&tft);
 int displayWidth = 0;
 int displayHeight = 0;
+int displayCenterX = 0;
+int displayCenterY = 0;
 
 // PFD parameters
 float pitch = 0;       // degrees
@@ -44,22 +46,20 @@ void setup()
     Serial.begin(9600);
     printMemoryInfo();
     tft.init();
-    tft.setRotation(1);
 
     displayHeight = tft.height();
     displayWidth = tft.width();
+    displayCenterX = displayWidth / 2;
+    displayCenterY = displayHeight / 2;
 
     tft.fillScreen(BACKGROUND_COLOR);
 
-    if (background.createSprite(240, 240) == nullptr)
+    if (background.createSprite(displayWidth, displayHeight) == nullptr)
         Serial.println("background Sprite not created :(");
 
-    background.setPivot(120, 120);
+    background.setPivot(displayCenterX, displayCenterY);
 
-    if (horizonSky.createSprite(200, 200) == nullptr)
-        Serial.println("horizon Sprite not created :(");
-
-    if (horizon.createSprite(200, 200) == nullptr)
+    if (horizon.createSprite(displayWidth, displayHeight) == nullptr)
         Serial.println("horizon Sprite not created :(");
 
     printMemoryInfo();
@@ -129,17 +129,89 @@ void drawPFD()
 
 void drawArtificialHorizon(float pitchDeg, float rollDeg)
 {
-    int diffPitch = ((int)pitchDeg);
-    horizonSky.fillCircle(100, 100, 98, WHITE_COLOR);
-    horizonSky.fillCircle(100, 100, 95, SKY_COLOR);
+    const int pitchStep = 5; // degrees between ladder lines
+    const int ladderLineLength = 20;
+    const int longLineLength = 40;
 
     horizon.fillSprite(BACKGROUND_COLOR);
-    horizon.fillCircle(100, 100, 95, GROUND_COLOR);
-    horizon.fillRect(0, 0, 200, 100 + diffPitch, BACKGROUND_COLOR);
 
-    horizon.pushToSprite(&horizonSky, 0, 0, BACKGROUND_COLOR);
-    horizonSky.pushRotated(&background, rollDeg, BACKGROUND_COLOR);
+    // Sky and ground rotating background
+    for (int y = 0; y < displayHeight; ++y)
+    {
+        uint16_t color = (y < displayCenterY + pitchDeg * 2) ? SKY_COLOR : GROUND_COLOR;
+        horizon.drawFastHLine(0, y, displayWidth, color);
+    }
+
+    // Pitch ladder lines
+    for (int pitch = -45; pitch <= 45; pitch += pitchStep)
+    {
+        if (pitch == 0)
+            continue; // skip center line here
+
+        int y = displayCenterY - pitch * 2 + pitchDeg * 2;
+
+        int lineLength = (pitch % 10 == 0) ? longLineLength : ladderLineLength;
+        horizon.drawFastHLine(displayCenterX - lineLength / 2, y, lineLength, WHITE_COLOR);
+
+        if (pitch % 10 == 0)
+        {
+            horizon.setTextColor(WHITE_COLOR);
+            horizon.setTextSize(1);
+            horizon.setCursor(displayCenterX + longLineLength / 2 + 2, y - 3);
+            horizon.print(abs(pitch));
+            horizon.setCursor(displayCenterX - longLineLength / 2 - 10, y - 3);
+            horizon.print(abs(pitch));
+        }
+    }
+
+    horizon.fillTriangle(displayCenterX - 5, displayCenterY - 80, displayCenterX + 5, displayCenterY - 80, displayCenterX, displayCenterY - 95, RED_COLOR);
+
+    // Rotate horizon based on roll
+    horizon.pushRotated(&background, rollDeg, BACKGROUND_COLOR);
+
+    background.drawArc(displayCenterX, displayCenterY, 95, 121, 90, 270, SKY_COLOR, SKY_COLOR, false);
+    background.drawArc(displayCenterX, displayCenterY, 95, 121, 0, 90, GROUND_COLOR, GROUND_COLOR, false);
+    background.drawArc(displayCenterX, displayCenterY, 95, 121, 270, 360, GROUND_COLOR, GROUND_COLOR, false);
+    background.drawFastHLine(0, displayCenterY, 25, WHITE_COLOR);
+    background.drawFastHLine(displayWidth - 25, displayCenterY, 25, WHITE_COLOR);
+    background.drawSmoothCircle(displayCenterX, displayCenterY, 95, BACKGROUND_COLOR, BACKGROUND_COLOR);
+
+    // Roll scale arc
+    for (int angle = -60; angle <= 60; angle += 10)
+    {
+        float rad = radians(angle);
+        int r1 = 97;
+        int r2 = (angle % 30 == 0) ? 112 : 107;
+        int x1 = displayCenterX + r1 * sin(rad);
+        int y1 = displayCenterY - r1 * cos(rad);
+        int x2 = displayCenterX + r2 * sin(rad);
+        int y2 = displayCenterY - r2 * cos(rad);
+        background.drawLine(x1, y1, x2, y2, WHITE_COLOR);
+    }
 }
+
+// void drawArtificialHorizon(float pitchDeg, float rollDeg)
+// {
+//     int diffPitch = ((int)pitchDeg);
+
+//     background.fillRect(0, 0, displayWidth, displayCenterY, SKY_COLOR);
+//     background.fillRect(0, displayCenterY, displayWidth, displayCenterY, GROUND_COLOR);
+//     background.drawLine(0, displayCenterY + 1, displayWidth, displayCenterY + 1, WHITE_COLOR);
+//     background.drawLine(0, displayCenterY, displayWidth, displayCenterY, WHITE_COLOR);
+//     background.drawLine(0, displayCenterY - 1, displayWidth, displayCenterY - 1, WHITE_COLOR);
+
+//     background.fillCircle(displayCenterX, displayCenterY, 98, WHITE_COLOR);
+
+//     background.fillCircle(displayCenterX, displayCenterY, 95, SKY_COLOR);
+
+//     horizon.fillSprite(BACKGROUND_COLOR);
+//     horizon.fillCircle(displayCenterX, displayCenterY, 95, GROUND_COLOR);
+//     horizon.fillRect(0, 0, displayHeight, displayCenterX + diffPitch, BACKGROUND_COLOR);
+
+//     horizon.fillTriangle(displayCenterX - 3, displayCenterY - 80, displayCenterX + 3, displayCenterY - 80, displayCenterX, displayCenterY - 95, RED_COLOR);
+
+//     horizon.pushRotated(&background, rollDeg, BACKGROUND_COLOR);
+// }
 
 void drawAirspeedIndicator(float speed)
 {
@@ -311,9 +383,7 @@ void drawHeadingIndicator(float heading)
 
 void drawCenterReticle()
 {
-    int centerX = displayWidth / 2;
-    int centerY = displayHeight / 2;
-
-    background.drawWideLine(centerX - 20, centerY, centerX + 20, centerY, 3, WHITE_COLOR, BACKGROUND_COLOR);
-    background.drawWideLine(centerX, centerY + 20, centerX, centerY - 20, 3, WHITE_COLOR, BACKGROUND_COLOR);
+    background.fillCircle(displayCenterX, displayCenterY, 5, YELLOW_COLOR);
+    background.drawFastHLine(displayCenterX - 25, displayCenterY, 50, YELLOW_COLOR);
+    background.drawFastVLine(displayCenterX, displayCenterY - 15, 10, YELLOW_COLOR);
 }

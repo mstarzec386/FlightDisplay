@@ -31,6 +31,7 @@ float vspeed = 0;      // feet per minute
 
 // Function declarations
 void drawPFD();
+void drawRollIndicator(float roll);
 void drawArtificialHorizon(float pitch, float roll);
 void drawAirspeedIndicator(float speed);
 void drawAltitudeIndicator(float altitude, float vspeed);
@@ -44,21 +45,21 @@ void setup()
     Serial.begin(9600);
     printMemoryInfo();
     tft.init();
-    tft.setRotation(1);
+    tft.setRotation(3);
 
     tft.fillScreen(BACKGROUND_COLOR);
 
-    background.setColorDepth(8);
+    // background.setColorDepth(8);
     if (background.createSprite(320, 240) == nullptr)
         Serial.println("background Sprite not created :(");
 
     background.setPivot(160, 120);
 
-    horizonSky.setColorDepth(8);
+    // horizonSky.setColorDepth(8);
     if (horizonSky.createSprite(200, 200) == nullptr)
         Serial.println("horizon Sprite not created :(");
 
-    horizon.setColorDepth(8);
+    // horizon.setColorDepth(8);
     if (horizon.createSprite(200, 200) == nullptr)
         Serial.println("horizon Sprite not created :(");
 
@@ -111,6 +112,7 @@ void drawPFD()
     background.fillSprite(BACKGROUND_COLOR);
     // Draw the artificial horizon
     drawArtificialHorizon(pitch, roll);
+    // drawRollIndicator(roll);
 
     // Draw the airspeed indicator
     drawAirspeedIndicator(airspeed);
@@ -142,16 +144,17 @@ void drawArtificialHorizon(float pitchDeg, float rollDeg)
     int centerY = HEIGHT / 2;
 
     horizon.pushToSprite(&horizonSky, 0, 0, BACKGROUND_COLOR);
-    horizonSky.pushRotated(&background, rollDeg, BACKGROUND_COLOR);
+
+    horizonSky.pushRotated(&background, roll, BACKGROUND_COLOR);
 }
 
 void drawRollIndicator(float roll)
 {
-    int centerX = WIDTH / 2;
-    int centerY = HEIGHT / 2;
+    int centerX = 100;
+    int centerY = 100;
     int radius = 60;
 
-    tft.drawCircle(centerX, centerY, radius, WHITE_COLOR);
+    horizon.drawCircle(centerX, centerY, radius, WHITE_COLOR);
 
     for (int angle = -60; angle <= 60; angle += 10)
     {
@@ -165,22 +168,24 @@ void drawRollIndicator(float roll)
         int x2 = centerX + (radius - markLength) * sin(rad);
         int y2 = centerY - (radius - markLength) * cos(rad);
 
-        tft.drawLine(x1, y1, x2, y2, WHITE_COLOR);
+        horizon.drawLine(x1, y1, x2, y2, WHITE_COLOR);
 
         if (abs(angle) % 30 == 0)
         {
-            tft.setTextColor(WHITE_COLOR, BACKGROUND_COLOR);
-            tft.setTextSize(1);
+            horizon.setTextColor(WHITE_COLOR, BACKGROUND_COLOR);
+            horizon.setTextSize(1);
             x2 = centerX + (radius - 20) * sin(rad);
             y2 = centerY - (radius - 20) * cos(rad);
-            tft.setCursor(x2 - 6, y2 - 4);
-            tft.print(abs(angle));
+            horizon.setCursor(x2 - 6, y2 - 4);
+            horizon.print(abs(angle));
         }
     }
 
-    tft.fillTriangle(centerX - 5, centerY - radius - 10,
-                     centerX, centerY - radius,
-                     centerX + 5, centerY - radius - 10, RED_COLOR);
+    horizon.fillTriangle(centerX - 5, centerY - radius - 10,
+                         centerX, centerY - radius,
+                         centerX + 5, centerY - radius - 10, RED_COLOR);
+
+    horizon.pushToSprite(&horizonSky, 0, 0, BACKGROUND_COLOR);
 }
 
 void drawAirspeedIndicator(float speed)

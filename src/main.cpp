@@ -2,25 +2,11 @@
 #include <TFT_eSPI.h>
 #include <SPI.h>
 #include <math.h>
+#include <HardwareSerial.h>
 
 #include "User_setup.h"
 
-TFT_eSPI tft = TFT_eSPI();
-TFT_eSprite background = TFT_eSprite(&tft);
-TFT_eSprite horizonSky = TFT_eSprite(&tft);
-TFT_eSprite horizon = TFT_eSprite(&tft);
-int displayWidth = 0;
-int displayHeight = 0;
-int displayCenterX = 0;
-int displayCenterY = 0;
-
-// PFD parameters
-float pitch = 0;       // degrees
-float roll = 0;        // degrees
-float airspeed = 120;  // knots
-float altitude = 4500; // feet
-float heading = 180;   // degrees
-float vspeed = 0;      // feet per minute
+#define MSP_ATTITUDE 108
 
 // Colors
 #define BACKGROUND_COLOR TFT_BLACK
@@ -31,6 +17,25 @@ float vspeed = 0;      // feet per minute
 #define YELLOW_COLOR TFT_YELLOW
 #define RED_COLOR TFT_RED
 
+TFT_eSPI tft = TFT_eSPI();
+TFT_eSprite background = TFT_eSprite(&tft);
+TFT_eSprite horizonSky = TFT_eSprite(&tft);
+TFT_eSprite horizon = TFT_eSprite(&tft);
+int displayWidth = 0;
+int displayHeight = 0;
+int displayCenterX = 0;
+int displayCenterY = 0;
+
+uint8_t requestMSP[] = {'$', 'M', '<', 0x00, MSP_ATTITUDE, (uint8_t)(MSP_ATTITUDE ^ 0x00)};
+
+// PFD parameters
+float pitch = 0;       // degrees
+float roll = 0;        // degrees
+float airspeed = 120;  // knots
+float altitude = 4500; // feet
+float heading = 180;   // degrees
+float vspeed = 0;      // feet per minute
+
 // Function declarations
 void drawPFD();
 void drawArtificialHorizon(float pitch, float roll);
@@ -40,10 +45,14 @@ void drawVerticalSpeedIndicator(float vspeed, int x, int y);
 void drawHeadingIndicator(float heading);
 void drawCenterReticle();
 void printMemoryInfo();
+void sendMSPRequest();
+bool readAttitude(int16_t &roll, int16_t &pitch, int16_t &yaw);
 
 void setup()
 {
     Serial.begin(9600);
+    Serial1.begin(115200, SERIAL_8N1, 21, 22);
+
     printMemoryInfo();
     tft.init();
 
@@ -67,15 +76,62 @@ void setup()
 
 void loop()
 {
+    sendMSPRequest();
+    if (false)
+    {
+        pitch = 50.0 * sin(millis() / 3000.0);
+        roll = 120.0 * sin(millis() / 5000.0);
+        airspeed = 120 + 20 * sin(millis() / 8000.0);
+        altitude = 4500 + 500 * sin(millis() / 9000.0);
+        heading = fmod(180 + 30 * sin(millis() / 6000.0), 360);
+        vspeed = 500 * sin(millis() / 4000.0);
+    }
+    else
+    {
+
+        int16_t rollRaw, pitchRaw, yawRaw;
+        readAttitude(rollRaw, pitchRaw, yawRaw);
+        roll = rollRaw/10.0f;
+        pitch = pitchRaw/10.0f;
+
+        Serial.println(pitch);
+        Serial.println(roll);
+    }
     // Simulate changing flight parameters
-    pitch = 50.0 * sin(millis() / 3000.0);
-    roll = 120.0 * sin(millis() / 5000.0);
-    airspeed = 120 + 20 * sin(millis() / 8000.0);
-    altitude = 4500 + 500 * sin(millis() / 9000.0);
-    heading = fmod(180 + 30 * sin(millis() / 6000.0), 360);
-    vspeed = 500 * sin(millis() / 4000.0);
 
     drawPFD();
+}
+
+void sendMSPRequest()
+{
+    Serial1.write(requestMSP, sizeof(requestMSP));
+}
+
+bool readAttitude(int16_t &roll, int16_t &pitch, int16_t &yaw)
+{
+    if (Serial1.available() < 11)
+        return false;
+
+    if (Serial1.read() != '$')
+        return false;
+    if (Serial1.read() != 'M')
+        return false;
+    if (Serial1.read() != '>')
+        return false;
+
+    uint8_t dataSize = Serial1.read();
+    uint8_t cmd = Serial1.read();
+
+    if (cmd != MSP_ATTITUDE || dataSize != 6)
+        return false;
+
+    roll = Serial1.read() | (Serial1.read() << 8);
+    pitch = Serial1.read() | (Serial1.read() << 8);
+    yaw = Serial1.read() | (Serial1.read() << 8);
+
+    uint8_t checksum = Serial1.read(); // Not verified here, but could be added
+
+    return true;
 }
 
 void printMemoryInfo()
